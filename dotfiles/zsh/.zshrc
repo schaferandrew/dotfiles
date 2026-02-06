@@ -31,11 +31,14 @@ export EDITOR=vim
 export VISUAL=vim
 
 # --- Tool initialization ---
+# Cache brew prefix once to avoid repeated slow calls (~200ms each)
+_brew_prefix="$(brew --prefix 2>/dev/null)"
+
 # nvm
 export NVM_DIR="$HOME/.nvm"
-if [ -s "$(brew --prefix nvm 2>/dev/null)/nvm.sh" ]; then
+if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/nvm/nvm.sh" ]; then
   # shellcheck disable=SC1091
-  source "$(brew --prefix nvm)/nvm.sh"
+  source "$_brew_prefix/opt/nvm/nvm.sh"
 fi
 
 # pyenv
@@ -49,13 +52,13 @@ if command -v starship >/dev/null 2>&1; then
 fi
 
 # fzf
-if [ -s "$(brew --prefix fzf 2>/dev/null)/shell/completion.zsh" ]; then
+if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/fzf/shell/completion.zsh" ]; then
   # shellcheck disable=SC1091
-  source "$(brew --prefix fzf)/shell/completion.zsh"
+  source "$_brew_prefix/opt/fzf/shell/completion.zsh"
 fi
-if [ -s "$(brew --prefix fzf 2>/dev/null)/shell/key-bindings.zsh" ]; then
+if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/fzf/shell/key-bindings.zsh" ]; then
   # shellcheck disable=SC1091
-  source "$(brew --prefix fzf)/shell/key-bindings.zsh"
+  source "$_brew_prefix/opt/fzf/shell/key-bindings.zsh"
 fi
 
 # zoxide
@@ -63,6 +66,7 @@ if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
 fi
 
+unset _brew_prefix
+
 # --- Aliases ---
-# Agent optimization: prefer rg and fd
-alias grep="rg"
+alias search="rg"

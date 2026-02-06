@@ -81,5 +81,5 @@ README.md
 ```
 
 ## Notes
-- `bootstrap.sh` is idempotent and safe to re-run.
+- `bootstrap.sh` is safe to re-run. It will skip copying dotfiles that already exist on the machine so your local customizations are preserved. Remove a dotfile first if you want to re-copy the default from this repo.
 - Do not commit secrets or private keys.

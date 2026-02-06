@@ -69,9 +69,11 @@ install_node() {
   mkdir -p "$NVM_DIR"
 
   # Source nvm from Homebrew
-  if [ -s "$(brew --prefix nvm 2>/dev/null)/nvm.sh" ]; then
+  local nvm_dir
+  nvm_dir="$(brew --prefix nvm 2>/dev/null)" || true
+  if [ -n "$nvm_dir" ] && [ -s "$nvm_dir/nvm.sh" ]; then
     # shellcheck disable=SC1091
-    source "$(brew --prefix nvm)/nvm.sh"
+    source "$nvm_dir/nvm.sh"
   else
     warn "nvm not found; skipping Node install"
     return
@@ -104,6 +106,7 @@ install_python() {
     pyenv install "$latest"
   fi
   pyenv global "$latest"
+  eval "$(pyenv init -)"
 
   log "Upgrading pip and installing pipx"
   python3 -m pip install --upgrade pip
@@ -153,13 +156,22 @@ SECRETS
   chmod 600 "$secrets_file"
 }
 
+copy_if_missing() {
+  local src="$1"
+  local dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  if [ -f "$dest" ]; then
+    warn "$dest already exists; skipping (remove it to re-copy from dotfiles)"
+  else
+    cp "$src" "$dest"
+  fi
+}
+
 install_dotfiles() {
   log "Copying dotfiles"
-  cp "$ROOT_DIR/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-  # Copy .gitconfig (not symlink) so bootstrap can write user identity without modifying the repo
-  cp "$ROOT_DIR/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
-  mkdir -p "$HOME/.config"
-  cp "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
+  copy_if_missing "$ROOT_DIR/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+  copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+  copy_if_missing "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
 }
 
 # --- Git identity ---
@@ -173,9 +185,10 @@ configure_git_user() {
   if [ -n "$current_name" ] && [ -n "$current_email" ]; then
     printf "  Current git user: %s <%s>\n" "$current_name" "$current_email"
     read -rp "  Keep current git identity? [Y/n] " keep
-    if [[ "${keep,,}" =~ ^(y|yes|)$ ]]; then
-      return
-    fi
+    case "$keep" in
+      [nN]*) ;;  # user said no — fall through to prompt
+      *) return ;;
+    esac
   fi
 
   read -rp "  Enter your full name for git commits: " git_name
@@ -194,8 +207,7 @@ configure_git_user() {
 # --- Opencode config ---
 install_opencode_config() {
   log "Generating Opencode config"
-  mkdir -p "$HOME/.config/opencode"
-  cp "$ROOT_DIR/dotfiles/opencode/opencode.template.jsonc" "$HOME/.config/opencode/opencode.jsonc"
+  copy_if_missing "$ROOT_DIR/dotfiles/opencode/opencode.template.jsonc" "$HOME/.config/opencode/opencode.jsonc"
 }
 
 # --- Validation ---
@@ -236,10 +248,13 @@ main() {
   install_opencode_config
   validate_env
 
+  local git_email
+  git_email=$(git config --global user.email 2>/dev/null || echo "your_email@example.com")
+
   log "Post-install steps"
-  cat <<'POST'
+  cat <<POST
 1) Add SSH key (if needed):
-   ssh-keygen -t ed25519 -C "user_email_here"
+   ssh-keygen -t ed25519 -C "$git_email"
    pbcopy < ~/.ssh/id_ed25519.pub
    Then add the key to GitHub.
 
