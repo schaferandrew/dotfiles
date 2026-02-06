@@ -1,0 +1,25 @@
+# ~/.gitconfig
+# Minimal, safe defaults. Customize user.name and user.email locally.
+
+[user]
+  name = Your Name
+  email = you@example.com
+
+[init]
+  defaultBranch = main
+
+[pull]
+  rebase = false
+
+[core]
+  editor = vim
+  autocrlf = input
+
+[fetch]
+  prune = true
+
+[diff]
+  colorMoved = zebra
+
+[rerere]
+  enabled = true

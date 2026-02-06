@@ -1,0 +1,30 @@
+# Starship prompt config
+# Keep it fast and readable for long dev sessions.
+
+add_newline = true
+
+format = "$directory$git_branch$git_status$nodejs$python$cmd_duration$line_break$character"
+
+[directory]
+style = "bold cyan"
+truncate_to_repo = true
+
+[git_branch]
+style = "bold purple"
+
+[git_status]
+style = "bold yellow"
+
+[nodejs]
+style = "bold green"
+
+[python]
+style = "bold blue"
+
+[cmd_duration]
+style = "bold white"
+min_time = 500
+
+[character]
+success_symbol = "➜"
+error_symbol = "✗"
