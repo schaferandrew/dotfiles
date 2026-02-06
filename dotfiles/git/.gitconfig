@@ -1,15 +1,11 @@
 # ~/.gitconfig
-# Minimal, safe defaults. Customize user.name and user.email locally.
-
-[user]
-  name = Your Name
-  email = you@example.com
+# Minimal, safe defaults. user.name and user.email are set by bootstrap.sh.
 
 [init]
   defaultBranch = main
 
 [pull]
-  rebase = false
+  rebase = true
 
 [core]
   editor = vim

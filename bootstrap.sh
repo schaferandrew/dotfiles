@@ -153,19 +153,42 @@ SECRETS
   chmod 600 "$secrets_file"
 }
 
-# --- Dotfiles symlinks ---
-symlink_dotfile() {
-  local src="$1"
-  local dest="$2"
-  mkdir -p "$(dirname "$dest")"
-  ln -sfn "$src" "$dest"
+install_dotfiles() {
+  log "Copying dotfiles"
+  cp "$ROOT_DIR/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+  # Copy .gitconfig (not symlink) so bootstrap can write user identity without modifying the repo
+  cp "$ROOT_DIR/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+  mkdir -p "$HOME/.config"
+  cp "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
 }
 
-install_dotfiles() {
-  log "Symlinking dotfiles"
-  symlink_dotfile "$ROOT_DIR/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-  symlink_dotfile "$ROOT_DIR/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
-  symlink_dotfile "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
+# --- Git identity ---
+configure_git_user() {
+  log "Configuring Git identity"
+
+  local current_name current_email
+  current_name=$(git config --global user.name 2>/dev/null || true)
+  current_email=$(git config --global user.email 2>/dev/null || true)
+
+  if [ -n "$current_name" ] && [ -n "$current_email" ]; then
+    printf "  Current git user: %s <%s>\n" "$current_name" "$current_email"
+    read -rp "  Keep current git identity? [Y/n] " keep
+    if [[ "${keep,,}" =~ ^(y|yes|)$ ]]; then
+      return
+    fi
+  fi
+
+  read -rp "  Enter your full name for git commits: " git_name
+  read -rp "  Enter your email for git commits: " git_email
+
+  if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+    warn "Name or email was empty; skipping git identity configuration"
+    return
+  fi
+
+  git config --global user.name "$git_name"
+  git config --global user.email "$git_email"
+  printf "  Git identity set to: %s <%s>\n" "$git_name" "$git_email"
 }
 
 # --- Opencode config ---
@@ -209,6 +232,7 @@ main() {
 
   ensure_secrets
   install_dotfiles
+  configure_git_user
   install_opencode_config
   validate_env
 
