@@ -13,9 +13,6 @@ fi
 # User-local binaries
 export PATH="$HOME/.local/bin:$PATH"
 
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-export PATH="$PNPM_HOME:$PATH"
 
 # --- Secrets loading ---
 # Never commit secrets. This only loads if the file exists.
@@ -41,29 +38,14 @@ if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/nvm/nvm.sh" ]; then
   source "$_brew_prefix/opt/nvm/nvm.sh"
 fi
 
-# pyenv
-if command -v pyenv >/dev/null 2>&1; then
-  eval "$(pyenv init -)"
+# rbenv
+if command -v rbenv >/dev/null 2>&1; then
+  eval "$(rbenv init - zsh)"
 fi
 
 # starship
 if command -v starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
-fi
-
-# fzf
-if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/fzf/shell/completion.zsh" ]; then
-  # shellcheck disable=SC1091
-  source "$_brew_prefix/opt/fzf/shell/completion.zsh"
-fi
-if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/fzf/shell/key-bindings.zsh" ]; then
-  # shellcheck disable=SC1091
-  source "$_brew_prefix/opt/fzf/shell/key-bindings.zsh"
-fi
-
-# zoxide
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init zsh)"
 fi
 
 unset _brew_prefix
