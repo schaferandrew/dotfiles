@@ -1,24 +1,34 @@
-# Homebrew Bundle: CLI tools and runtimes
+# Homebrew Bundle: CLI tools and apps
 # Safe to re-run: brew bundle will converge state.
+#
+# Not managed here (install manually):
+#   opencode: npm install -g opencode-ai  OR  see https://opencode.ai
 
-# Required CLI tools
+# Version control
 brew "git"
 brew "gh"
-brew "curl"
-brew "wget"
-brew "jq"
-brew "ripgrep"
-brew "fzf"
-brew "zoxide"
-brew "eza"
-brew "bat"
+
+# Shell / terminal
+brew "starship"
 brew "tmux"
 brew "vim"
-brew "fd"
 
-# Prompt / shells
-brew "starship"
+# File / search utilities
+brew "tree"
+brew "wget"
+brew "curl"
+brew "jq"
+brew "ripgrep"
 
-# Node / Python managers
+# Media
+brew "ffmpeg"
+brew "yt-dlp"
+
+# Language runtimes / managers
 brew "nvm"
-brew "pyenv"
+brew "rbenv"
+brew "uv"
+brew "ollama"
+
+# Fonts
+cask "font-jetbrains-mono-nerd-font"
