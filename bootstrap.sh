@@ -40,6 +40,7 @@ fi
 # ============================================================
 
 install_homebrew() {
+  [[ "$OS" != "macos" ]] && return
   if command -v brew >/dev/null 2>&1; then
     return
   fi
@@ -55,11 +56,13 @@ install_homebrew() {
 }
 
 install_brew_bundle() {
+  [[ "$OS" != "macos" ]] && return
   log "Installing Brewfile packages"
   brew bundle --file "$BREWFILE"
 }
 
 install_cask_if_possible() {
+  [[ "$OS" != "macos" ]] && return
   local cask="$1"
   if brew list --cask "$cask" >/dev/null 2>&1; then
     return
@@ -75,6 +78,7 @@ install_cask_if_possible() {
 }
 
 install_formula_if_possible() {
+  [[ "$OS" != "macos" ]] && return
   local formula="$1"
   if brew list "$formula" >/dev/null 2>&1; then
     return
