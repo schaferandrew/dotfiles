@@ -21,6 +21,7 @@ wget
 curl
 jq
 ripgrep
+zstd
 
 # Media
 ffmpeg
