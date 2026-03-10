@@ -36,6 +36,44 @@ if [[ "$OS" == "unknown" ]]; then
 fi
 
 # ============================================================
+# Helpers
+# ============================================================
+
+# Run a command with sudo if available (handles root-in-container where sudo doesn't exist).
+_sudo_wrap() {
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    "$@"
+  fi
+}
+
+# Run an install function, warn and continue on failure (does not exit).
+# Usage: try_install "tool name" install_fn
+try_install() {
+  local name="$1"; shift
+  if ! "$@"; then
+    warn "$name install failed — continuing. Re-run bootstrap.sh to retry."
+  fi
+}
+
+# Prompt the user before installing an optional tool.
+# In non-interactive environments (CI, pipes) defaults to skip.
+# Returns 0 (proceed) or 1 (skip).
+prompt_optional() {
+  local name="$1"
+  if [ ! -t 0 ]; then
+    warn "Non-interactive session; skipping optional tool: $name"
+    return 1
+  fi
+  read -rp "  Install $name? [y/N] " answer
+  case "$answer" in
+    [yY]*) return 0 ;;
+    *) log "Skipping $name"; return 1 ;;
+  esac
+}
+
+# ============================================================
 # macOS — Homebrew (system tools + GUI apps)
 # ============================================================
 
@@ -72,15 +110,6 @@ install_cask_if_possible() {
 # ============================================================
 # Linux — apt (system tools)
 # ============================================================
-
-_apt() { apt-get "$@"; }
-_sudo_wrap() {
-  if command -v sudo >/dev/null 2>&1; then
-    sudo "$@"
-  else
-    "$@"
-  fi
-}
 
 install_apt_packages() {
   [[ "$OS" != "debian" ]] && return
@@ -122,6 +151,7 @@ install_starship() {
 
 install_ollama() {
   command -v ollama >/dev/null 2>&1 && return
+  prompt_optional "Ollama (local LLM runner)" || return 0
   log "Installing Ollama"
   curl -fsSL https://ollama.ai/install.sh | sh
 }
@@ -162,16 +192,17 @@ install_python() {
 }
 
 # ============================================================
-# Shared — Opencode CLI (npm)
+# Shared — Opencode CLI (npm, optional)
 # ============================================================
 
 install_opencode_cli() {
   command -v opencode >/dev/null 2>&1 && return
-  log "Installing Opencode CLI (best-effort)"
+  prompt_optional "Opencode CLI (AI coding agent)" || return 0
+  log "Installing Opencode CLI"
   if command -v npm >/dev/null 2>&1; then
     npm install -g opencode-ai || warn "Failed to install opencode-ai via npm"
   else
-    warn "npm not found; install manually after Node is set up: npm install -g opencode-ai"
+    warn "npm not found; install manually: npm install -g opencode-ai"
   fi
 }
 
@@ -282,9 +313,9 @@ POST
 
 2) Open ~/.secrets/env and add API keys.
 
-3) Start Ollama if needed: ollama serve
+3) If you installed Ollama, start it with: ollama serve
 
-4) Restart your terminal or run: source ~/.zshrc
+4) Restart your terminal or run: source ~/.bashrc
 POST
   fi
 }
@@ -296,26 +327,27 @@ POST
 main() {
   log "Detected OS: $OS"
 
-  # macOS — Homebrew for system tools + GUI apps
+  # macOS — Homebrew for system tools + GUI apps (hard failure: without brew nothing else works)
   install_homebrew
   install_brew_bundle
   install_cask_if_possible "visual-studio-code"
   install_cask_if_possible "cursor"
   install_cask_if_possible "docker"
 
-  # Linux — apt for system tools
+  # Linux — apt for system tools (hard failure: same reason)
   install_apt_packages
   install_gh_linux
 
-  # Shared — curl-installed (same on macOS + Linux)
-  install_uv
-  install_starship
-  install_ollama
-  install_node
-  install_python
-  install_opencode_cli
+  # Shared — curl-installed; warn and continue on failure so one bad network
+  # request doesn't abort everything that comes after.
+  try_install "uv"      install_uv
+  try_install "starship" install_starship
+  try_install "ollama"  install_ollama   # optional: user is prompted
+  try_install "node"    install_node
+  try_install "python"  install_python
+  try_install "opencode" install_opencode_cli  # optional: user is prompted
 
-  # Config & identity
+  # Config & identity — run these regardless of what was skipped above
   ensure_secrets
   install_dotfiles
   configure_git_user
