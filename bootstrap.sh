@@ -128,8 +128,12 @@ install_ollama_linux() {
   curl -fsSL https://ollama.ai/install.sh | sh
 }
 
-install_pyenv_linux() {
-  [[ "$OS" != "debian" ]] && return
+
+# ============================================================
+# Shared — pyenv
+# ============================================================
+
+install_pyenv() {
   command -v pyenv >/dev/null 2>&1 && return
   log "Installing pyenv"
   curl -fsSL https://pyenv.run | bash
@@ -369,9 +373,9 @@ main() {
   install_starship_linux
   install_uv_linux
   install_ollama_linux
-  install_pyenv_linux
 
   # Shared
+  install_pyenv
   install_node
   install_python
   install_opencode_cli
