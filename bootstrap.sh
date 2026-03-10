@@ -1,16 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Production bootstrap for macOS dotfiles.
+# Bootstrap for macOS and Debian/Ubuntu Linux dotfiles.
 # Safe to re-run; will converge installed state.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BREWFILE="$ROOT_DIR/Brewfile"
+LINUX_PACKAGES="$ROOT_DIR/packages.linux"
 
-log() { printf "\n==> %s\n" "$*"; }
+log()  { printf "\n==> %s\n" "$*"; }
 warn() { printf "\n[WARN] %s\n" "$*"; }
 
-# --- Homebrew ---
+# --- OS detection ---
+detect_os() {
+  if [[ "$(uname)" == "Darwin" ]]; then
+    echo "macos"
+  elif [[ -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    if [[ "${ID:-}" == "debian" || "${ID:-}" == "ubuntu" || "${ID_LIKE:-}" == *"debian"* ]]; then
+      echo "debian"
+    else
+      echo "unknown"
+    fi
+  else
+    echo "unknown"
+  fi
+}
+
+OS="$(detect_os)"
+
+if [[ "$OS" == "unknown" ]]; then
+  warn "Unsupported OS. Only macOS and Debian/Ubuntu Linux are supported."
+  exit 1
+fi
+
+# ============================================================
+# macOS — Homebrew
+# ============================================================
+
 install_homebrew() {
   if command -v brew >/dev/null 2>&1; then
     return
@@ -26,7 +54,6 @@ install_homebrew() {
   fi
 }
 
-# --- Brew packages ---
 install_brew_bundle() {
   log "Installing Brewfile packages"
   brew bundle --file "$BREWFILE"
@@ -62,21 +89,98 @@ install_formula_if_possible() {
   fi
 }
 
-# --- Node / pnpm ---
+# ============================================================
+# Linux — apt + curl-based tools
+# ============================================================
+
+install_apt_packages() {
+  log "Updating apt and installing packages"
+  sudo apt-get update -qq
+  # Read package list, stripping comments and blank lines
+  mapfile -t pkgs < <(grep -v '^#' "$LINUX_PACKAGES" | grep -v '^[[:space:]]*$')
+  if [[ ${#pkgs[@]} -gt 0 ]]; then
+    sudo apt-get install -y "${pkgs[@]}"
+  fi
+}
+
+install_gh_linux() {
+  if command -v gh >/dev/null 2>&1; then
+    return
+  fi
+  log "Installing GitHub CLI (gh)"
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+  sudo apt-get update -qq
+  sudo apt-get install -y gh
+}
+
+install_starship_linux() {
+  if command -v starship >/dev/null 2>&1; then
+    return
+  fi
+  log "Installing Starship prompt"
+  curl -sS https://starship.rs/install.sh | sh -s -- --yes
+}
+
+install_uv_linux() {
+  if command -v uv >/dev/null 2>&1; then
+    return
+  fi
+  log "Installing uv (Python package manager)"
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
+install_ollama_linux() {
+  if command -v ollama >/dev/null 2>&1; then
+    return
+  fi
+  log "Installing Ollama"
+  curl -fsSL https://ollama.ai/install.sh | sh
+}
+
+install_pyenv_linux() {
+  if command -v pyenv >/dev/null 2>&1; then
+    return
+  fi
+  log "Installing pyenv"
+  curl -fsSL https://pyenv.run | bash
+  export PYENV_ROOT="$HOME/.pyenv"
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  eval "$(pyenv init -)"
+}
+
+# ============================================================
+# Shared — Node / pnpm
+# ============================================================
+
 install_node() {
   log "Installing Node LTS via nvm"
   export NVM_DIR="$HOME/.nvm"
   mkdir -p "$NVM_DIR"
 
-  # Source nvm from Homebrew
-  local nvm_dir
-  nvm_dir="$(brew --prefix nvm 2>/dev/null)" || true
-  if [ -n "$nvm_dir" ] && [ -s "$nvm_dir/nvm.sh" ]; then
-    # shellcheck disable=SC1091
-    source "$nvm_dir/nvm.sh"
+  if [[ "$OS" == "macos" ]]; then
+    # Source nvm from Homebrew
+    local nvm_brew_prefix
+    nvm_brew_prefix="$(brew --prefix nvm 2>/dev/null)" || true
+    if [ -n "$nvm_brew_prefix" ] && [ -s "$nvm_brew_prefix/nvm.sh" ]; then
+      # shellcheck disable=SC1091
+      source "$nvm_brew_prefix/nvm.sh"
+    else
+      warn "nvm not found via Homebrew; skipping Node install"
+      return
+    fi
   else
-    warn "nvm not found; skipping Node install"
-    return
+    # Linux: install nvm via curl if not already present
+    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+      log "Installing nvm"
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    fi
+    # shellcheck disable=SC1091
+    source "$NVM_DIR/nvm.sh"
   fi
 
   nvm install --lts
@@ -86,7 +190,10 @@ install_node() {
   npm install -g pnpm
 }
 
-# --- Python ---
+# ============================================================
+# Shared — Python
+# ============================================================
+
 install_python() {
   log "Installing latest stable Python 3 via pyenv"
   if ! command -v pyenv >/dev/null 2>&1; then
@@ -119,24 +226,39 @@ install_python() {
   python3 -m pipx install --force ruff
 }
 
-# --- Opencode CLI ---
+# ============================================================
+# Shared — Opencode CLI
+# ============================================================
+
 install_opencode_cli() {
   if command -v opencode >/dev/null 2>&1; then
     return
   fi
 
   log "Installing Opencode CLI (best-effort)"
-  if brew info opencode >/dev/null 2>&1; then
-    brew install opencode || true
-  elif brew info opencode-cli >/dev/null 2>&1; then
-    brew install opencode-cli || true
+  if [[ "$OS" == "macos" ]]; then
+    if brew info opencode >/dev/null 2>&1; then
+      brew install opencode || true
+    elif brew info opencode-cli >/dev/null 2>&1; then
+      brew install opencode-cli || true
+    else
+      warn "Opencode CLI not available via Homebrew"
+      warn "Install manually: npm install -g opencode-ai"
+    fi
   else
-    warn "Opencode CLI not available via Homebrew"
-    warn "Install manually from the official Opencode docs"
+    if command -v npm >/dev/null 2>&1; then
+      npm install -g opencode-ai || warn "Failed to install opencode-ai via npm"
+    else
+      warn "npm not found; skipping Opencode CLI install"
+      warn "Install manually after Node is set up: npm install -g opencode-ai"
+    fi
   fi
 }
 
-# --- Secrets ---
+# ============================================================
+# Shared — Secrets, dotfiles, git identity, opencode config
+# ============================================================
+
 ensure_secrets() {
   log "Creating secrets template"
   mkdir -p "$HOME/.secrets"
@@ -169,8 +291,8 @@ copy_if_missing() {
 
 install_dotfiles() {
   log "Copying dotfiles"
-  copy_if_missing "$ROOT_DIR/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-  copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+  copy_if_missing "$ROOT_DIR/dotfiles/zsh/.zshrc"             "$HOME/.zshrc"
+  copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig"         "$HOME/.gitconfig"
   copy_if_missing "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
 }
 
@@ -223,20 +345,38 @@ validate_env() {
   done
 
   if [ "$missing" -ne 0 ]; then
-    warn "Some commands are missing. Re-run bootstrap after fixing Homebrew issues."
+    if [[ "$OS" == "macos" ]]; then
+      warn "Some commands are missing. Re-run bootstrap after fixing Homebrew issues."
+    else
+      warn "Some commands are missing. Re-run bootstrap after fixing install issues."
+    fi
   fi
 }
 
-# --- Main ---
-main() {
-  install_homebrew
-  install_brew_bundle
+# ============================================================
+# Main
+# ============================================================
 
-  # GUI / AI tools
-  install_cask_if_possible "visual-studio-code"
-  install_cask_if_possible "cursor"
-  install_cask_if_possible "docker"
-  install_formula_if_possible "ollama"
+main() {
+  log "Detected OS: $OS"
+
+  if [[ "$OS" == "macos" ]]; then
+    install_homebrew
+    install_brew_bundle
+
+    # GUI / AI tools
+    install_cask_if_possible "visual-studio-code"
+    install_cask_if_possible "cursor"
+    install_cask_if_possible "docker"
+    install_formula_if_possible "ollama"
+  else
+    install_apt_packages
+    install_gh_linux
+    install_starship_linux
+    install_uv_linux
+    install_ollama_linux
+    install_pyenv_linux
+  fi
 
   install_node
   install_python
@@ -252,7 +392,8 @@ main() {
   git_email=$(git config --global user.email 2>/dev/null || echo "your_email@example.com")
 
   log "Post-install steps"
-  cat <<POST
+  if [[ "$OS" == "macos" ]]; then
+    cat <<POST
 1) Add SSH key (if needed):
    ssh-keygen -t ed25519 -C "$git_email"
    pbcopy < ~/.ssh/id_ed25519.pub
@@ -266,6 +407,20 @@ main() {
 
 5) Restart your terminal or run: source ~/.zshrc
 POST
+  else
+    cat <<POST
+1) Add SSH key (if needed):
+   ssh-keygen -t ed25519 -C "$git_email"
+   cat ~/.ssh/id_ed25519.pub
+   Then add the key to GitHub.
+
+2) Open ~/.secrets/env and add API keys.
+
+3) Start Ollama if needed: ollama serve
+
+4) Restart your terminal or run: source ~/.zshrc
+POST
+  fi
 }
 
 main "$@"

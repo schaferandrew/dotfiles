@@ -1,0 +1,46 @@
+# apt packages — Linux (Debian/Ubuntu) equivalent of Brewfile
+# Used by bootstrap.sh: install_apt_packages reads this file.
+#
+# The following tools are NOT in apt and are installed separately by bootstrap.sh:
+#   starship  — curl https://starship.rs/install.sh | sh
+#   nvm       — curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+#   uv        — curl -LsSf https://astral.sh/uv/install.sh | sh
+#   ollama    — curl -fsSL https://ollama.ai/install.sh | sh
+#   gh        — added via GitHub's official apt repo (see bootstrap.sh)
+#   pyenv     — curl https://pyenv.run | bash
+
+# Version control
+git
+
+# Shell / terminal
+tmux
+vim
+
+# File / search utilities
+tree
+wget
+curl
+jq
+ripgrep
+
+# Media
+ffmpeg
+yt-dlp
+
+# Language runtimes / managers
+rbenv
+
+# Python / pyenv build dependencies
+build-essential
+libssl-dev
+zlib1g-dev
+libbz2-dev
+libreadline-dev
+libsqlite3-dev
+libncursesw5-dev
+xz-utils
+tk-dev
+libxml2-dev
+libxmlsec1-dev
+libffi-dev
+liblzma-dev
