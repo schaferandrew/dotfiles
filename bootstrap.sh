@@ -130,19 +130,6 @@ install_ollama_linux() {
 
 
 # ============================================================
-# Shared — pyenv
-# ============================================================
-
-install_pyenv() {
-  command -v pyenv >/dev/null 2>&1 && return
-  log "Installing pyenv"
-  curl -fsSL https://pyenv.run | bash
-  export PYENV_ROOT="$HOME/.pyenv"
-  export PATH="$PYENV_ROOT/bin:$PATH"
-  eval "$(pyenv init -)"
-}
-
-# ============================================================
 # Shared — Node / pnpm
 # ============================================================
 
@@ -182,31 +169,16 @@ install_node() {
 # ============================================================
 
 install_python() {
-  log "Installing latest stable Python 3 via pyenv"
-  if ! command -v pyenv >/dev/null 2>&1; then
-    warn "pyenv not found; skipping Python install"
+  if ! command -v uv >/dev/null 2>&1; then
+    warn "uv not found; skipping Python install"
     return
   fi
+  log "Installing latest Python via uv"
+  uv python install
 
-  local latest
-  latest=$(pyenv install -l | sed 's/^ *//' | grep -E '^3\.[0-9]+\.[0-9]+$' | tail -1)
-  if [ -z "$latest" ]; then
-    warn "Could not determine latest Python 3 version"
-    return
-  fi
-
-  pyenv versions --bare | grep -q "^${latest}$" || pyenv install "$latest"
-  pyenv global "$latest"
-  eval "$(pyenv init -)"
-
-  log "Upgrading pip and installing pipx"
-  python3 -m pip install --upgrade pip
-  python3 -m pip install --upgrade pipx
-  python3 -m pipx ensurepath
-
-  log "Installing pipx tools"
-  python3 -m pipx install --force pre-commit
-  python3 -m pipx install --force ruff
+  log "Installing uv tools"
+  uv tool install pre-commit
+  uv tool install ruff
 }
 
 # ============================================================
@@ -271,6 +243,7 @@ install_dotfiles() {
   copy_if_missing "$ROOT_DIR/dotfiles/bash/.bashrc"           "$HOME/.bashrc"
   copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig"         "$HOME/.gitconfig"
   copy_if_missing "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
+  copy_if_missing "$ROOT_DIR/dotfiles/vim/.vimrc"             "$HOME/.vimrc"
 }
 
 configure_git_user() {
@@ -375,7 +348,6 @@ main() {
   install_ollama_linux
 
   # Shared
-  install_pyenv
   install_node
   install_python
   install_opencode_cli

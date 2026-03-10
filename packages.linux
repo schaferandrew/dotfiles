@@ -7,7 +7,6 @@
 #   uv        — curl -LsSf https://astral.sh/uv/install.sh | sh
 #   ollama    — curl -fsSL https://ollama.ai/install.sh | sh
 #   gh        — added via GitHub's official apt repo (see bootstrap.sh)
-#   pyenv     — curl https://pyenv.run | bash
 
 # Version control
 git
@@ -29,18 +28,3 @@ yt-dlp
 
 # Language runtimes / managers
 rbenv
-
-# Python / pyenv build dependencies
-build-essential
-libssl-dev
-zlib1g-dev
-libbz2-dev
-libreadline-dev
-libsqlite3-dev
-libncursesw5-dev
-xz-utils
-tk-dev
-libxml2-dev
-libxmlsec1-dev
-libffi-dev
-liblzma-dev
