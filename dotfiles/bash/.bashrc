@@ -54,14 +54,7 @@ export LESS_TERMCAP_us=$'\e[1;32m'
 
 # nvm
 export NVM_DIR="$HOME/.nvm"
-if [[ "$(uname)" == "Darwin" ]]; then
-  _brew_prefix="$(brew --prefix 2>/dev/null)"
-  if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/nvm/nvm.sh" ]; then
-    # shellcheck disable=SC1091
-    source "$_brew_prefix/opt/nvm/nvm.sh"
-  fi
-  unset _brew_prefix
-elif [ -s "$NVM_DIR/nvm.sh" ]; then
+if [ -s "$NVM_DIR/nvm.sh" ]; then
   # shellcheck disable=SC1091
   source "$NVM_DIR/nvm.sh"
 fi

@@ -36,7 +36,7 @@ if [[ "$OS" == "unknown" ]]; then
 fi
 
 # ============================================================
-# macOS — Homebrew
+# macOS — Homebrew (system tools + GUI apps)
 # ============================================================
 
 install_homebrew() {
@@ -69,20 +69,8 @@ install_cask_if_possible() {
   fi
 }
 
-install_formula_if_possible() {
-  [[ "$OS" != "macos" ]] && return
-  local formula="$1"
-  brew list "$formula" >/dev/null 2>&1 && return
-  if brew info "$formula" >/dev/null 2>&1; then
-    log "Installing formula: $formula"
-    brew install "$formula" || warn "Failed to install formula: $formula"
-  else
-    warn "Formula not available: $formula"
-  fi
-}
-
 # ============================================================
-# Linux — apt + curl-based tools
+# Linux — apt (system tools)
 # ============================================================
 
 install_apt_packages() {
@@ -106,66 +94,50 @@ install_gh_linux() {
   sudo apt-get install -y gh
 }
 
-install_starship_linux() {
-  [[ "$OS" != "debian" ]] && return
+# ============================================================
+# Shared — curl-installed tools (same script on macOS + Linux)
+# ============================================================
+
+install_uv() {
+  command -v uv >/dev/null 2>&1 && return
+  log "Installing uv"
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
+install_starship() {
   command -v starship >/dev/null 2>&1 && return
   log "Installing Starship prompt"
   curl -sS https://starship.rs/install.sh | sh -s -- --yes
 }
 
-install_uv_linux() {
-  [[ "$OS" != "debian" ]] && return
-  command -v uv >/dev/null 2>&1 && return
-  log "Installing uv (Python package manager)"
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  export PATH="$HOME/.local/bin:$PATH"
-}
-
-install_ollama_linux() {
-  [[ "$OS" != "debian" ]] && return
+install_ollama() {
   command -v ollama >/dev/null 2>&1 && return
   log "Installing Ollama"
   curl -fsSL https://ollama.ai/install.sh | sh
 }
 
-
 # ============================================================
-# Shared — Node / pnpm
+# Shared — Node / pnpm (nvm via curl)
 # ============================================================
 
 install_node() {
   log "Installing Node LTS via nvm"
   export NVM_DIR="$HOME/.nvm"
-  mkdir -p "$NVM_DIR"
-
-  if [[ "$OS" == "macos" ]]; then
-    local nvm_brew_prefix
-    nvm_brew_prefix="$(brew --prefix nvm 2>/dev/null)" || true
-    if [ -n "$nvm_brew_prefix" ] && [ -s "$nvm_brew_prefix/nvm.sh" ]; then
-      # shellcheck disable=SC1091
-      source "$nvm_brew_prefix/nvm.sh"
-    else
-      warn "nvm not found via Homebrew; skipping Node install"
-      return
-    fi
-  else
-    if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-      log "Installing nvm"
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    fi
-    # shellcheck disable=SC1091
-    source "$NVM_DIR/nvm.sh"
+  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+    log "Installing nvm"
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
   fi
-
+  # shellcheck disable=SC1091
+  source "$NVM_DIR/nvm.sh"
   nvm install --lts
   nvm use --lts
-
   log "Installing pnpm"
   npm install -g pnpm
 }
 
 # ============================================================
-# Shared — Python
+# Shared — Python (via uv)
 # ============================================================
 
 install_python() {
@@ -175,33 +147,22 @@ install_python() {
   fi
   log "Installing latest Python via uv"
   uv python install
-
   log "Installing uv tools"
   uv tool install pre-commit
   uv tool install ruff
 }
 
 # ============================================================
-# Shared — Opencode CLI
+# Shared — Opencode CLI (npm)
 # ============================================================
 
 install_opencode_cli() {
   command -v opencode >/dev/null 2>&1 && return
   log "Installing Opencode CLI (best-effort)"
-  if [[ "$OS" == "macos" ]]; then
-    if brew info opencode >/dev/null 2>&1; then
-      brew install opencode || true
-    elif brew info opencode-cli >/dev/null 2>&1; then
-      brew install opencode-cli || true
-    else
-      warn "Opencode CLI not available via Homebrew; install manually: npm install -g opencode-ai"
-    fi
+  if command -v npm >/dev/null 2>&1; then
+    npm install -g opencode-ai || warn "Failed to install opencode-ai via npm"
   else
-    if command -v npm >/dev/null 2>&1; then
-      npm install -g opencode-ai || warn "Failed to install opencode-ai via npm"
-    else
-      warn "npm not found; install manually after Node is set up: npm install -g opencode-ai"
-    fi
+    warn "npm not found; install manually after Node is set up: npm install -g opencode-ai"
   fi
 }
 
@@ -280,14 +241,10 @@ install_opencode_config() {
 validate_env() {
   log "Validating environment"
   local missing=0
-  for cmd in git gh curl wget jq rg fzf zoxide eza bat tmux vim fd starship; do
+  for cmd in git gh curl wget jq rg tmux vim starship uv node; do
     command -v "$cmd" >/dev/null 2>&1 || { warn "Missing command: $cmd"; missing=1; }
   done
-  if [ "$missing" -ne 0 ]; then
-    [[ "$OS" == "macos" ]] \
-      && warn "Some commands are missing. Re-run bootstrap after fixing Homebrew issues." \
-      || warn "Some commands are missing. Re-run bootstrap after fixing install issues."
-  fi
+  [ "$missing" -ne 0 ] && warn "Some commands are missing. Re-run bootstrap to retry."
 }
 
 post_install_message() {
@@ -303,11 +260,9 @@ post_install_message() {
 
 2) Open ~/.secrets/env and add API keys.
 
-3) Start Docker Desktop and Ollama (first-run prompts may appear).
+3) Start Docker Desktop (first-run prompts may appear).
 
-4) For LM Studio: install manually if desired (not auto-installed).
-
-5) Restart your terminal or run: source ~/.zshrc
+4) Restart your terminal or run: source ~/.zshrc
 POST
   else
     cat <<POST
@@ -332,25 +287,26 @@ POST
 main() {
   log "Detected OS: $OS"
 
-  # macOS — each function no-ops on other platforms
+  # macOS — Homebrew for system tools + GUI apps
   install_homebrew
   install_brew_bundle
   install_cask_if_possible "visual-studio-code"
   install_cask_if_possible "cursor"
   install_cask_if_possible "docker"
-  install_formula_if_possible "ollama"
 
-  # Linux — each function no-ops on other platforms
+  # Linux — apt for system tools
   install_apt_packages
   install_gh_linux
-  install_starship_linux
-  install_uv_linux
-  install_ollama_linux
 
-  # Shared
+  # Shared — curl-installed (same on macOS + Linux)
+  install_uv
+  install_starship
+  install_ollama
   install_node
   install_python
   install_opencode_cli
+
+  # Config & identity
   ensure_secrets
   install_dotfiles
   configure_git_user
