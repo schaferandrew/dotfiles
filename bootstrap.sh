@@ -73,12 +73,21 @@ install_cask_if_possible() {
 # Linux — apt (system tools)
 # ============================================================
 
+_apt() { apt-get "$@"; }
+_sudo_wrap() {
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    "$@"
+  fi
+}
+
 install_apt_packages() {
   [[ "$OS" != "debian" ]] && return
   log "Updating apt and installing packages"
-  sudo apt-get update -qq
+  _sudo_wrap apt-get update -qq
   mapfile -t pkgs < <(grep -v '^#' "$LINUX_PACKAGES" | grep -v '^[[:space:]]*$')
-  [[ ${#pkgs[@]} -gt 0 ]] && sudo apt-get install -y "${pkgs[@]}"
+  [[ ${#pkgs[@]} -gt 0 ]] && _sudo_wrap apt-get install -y "${pkgs[@]}"
 }
 
 install_gh_linux() {
@@ -86,12 +95,12 @@ install_gh_linux() {
   command -v gh >/dev/null 2>&1 && return
   log "Installing GitHub CLI (gh)"
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-    | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-  sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    | _sudo_wrap dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  _sudo_wrap chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-    | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-  sudo apt-get update -qq
-  sudo apt-get install -y gh
+    | _sudo_wrap tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+  _sudo_wrap apt-get update -qq
+  _sudo_wrap apt-get install -y gh
 }
 
 # ============================================================
