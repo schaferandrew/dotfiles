@@ -1,6 +1,9 @@
-# ~/.zshrc
+# ~/.bashrc
 # Production-ready shell config for AI-assisted development.
 # Safe to source multiple times.
+
+# Only run for interactive shells
+[[ $- != *i* ]] && return
 
 # --- PATH setup ---
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -52,7 +55,6 @@ export LESS_TERMCAP_us=$'\e[1;32m'
 # nvm
 export NVM_DIR="$HOME/.nvm"
 if [[ "$(uname)" == "Darwin" ]]; then
-  # Cache brew prefix once to avoid repeated slow calls (~200ms each)
   _brew_prefix="$(brew --prefix 2>/dev/null)"
   if [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/nvm/nvm.sh" ]; then
     # shellcheck disable=SC1091
@@ -66,12 +68,12 @@ fi
 
 # rbenv
 if command -v rbenv >/dev/null 2>&1; then
-  eval "$(rbenv init - zsh)"
+  eval "$(rbenv init - bash)"
 fi
 
 # starship
 if command -v starship >/dev/null 2>&1; then
-  eval "$(starship init zsh)"
+  eval "$(starship init bash)"
 fi
 
 # --- Aliases ---
