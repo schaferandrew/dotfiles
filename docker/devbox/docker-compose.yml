@@ -1,0 +1,19 @@
+services:
+  devbox:
+    hostname: devbox
+    build: .
+    container_name: devbox
+    restart: unless-stopped
+    volumes:
+      - /mnt/storage/docker/devbox/workspace:/workspace
+      - /mnt/storage/docker/devbox/home:/root
+    ports:
+      - "2222:22"
+      - "3100:3000"
+    environment:
+      - TERM=xterm-256color
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: '4'

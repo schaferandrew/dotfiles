@@ -68,10 +68,33 @@ Add the key to GitHub.
 - LM Studio:
   - Not auto-installed. Add it manually if you want it.
 
+## Docker Devbox (Optional)
+
+A reference Docker setup that mirrors what `bootstrap.sh` installs, for use on non-macOS machines or in ephemeral environments.
+
+**Not wired into bootstrap** — grab it if you need it.
+
+```bash
+cd docker/devbox
+docker compose up -d
+docker compose exec devbox bash
+```
+
+Before starting, ensure `~/.secrets/env` exists on your host (even if empty):
+```bash
+mkdir -p ~/.secrets && touch ~/.secrets/env && chmod 700 ~/.secrets && chmod 600 ~/.secrets/env
+```
+
+See `docker/devbox/` for `Dockerfile` and `docker-compose.yml`.
+
 ## Repo Structure
 ```
 Brewfile
 bootstrap.sh
+docker/
+  devbox/
+    Dockerfile
+    docker-compose.yml
 dotfiles/
   zsh/.zshrc
   git/.gitconfig
