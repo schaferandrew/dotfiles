@@ -69,5 +69,11 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init bash)"
 fi
 
+# --- Bash completion (macOS only; Linux auto-loads via /etc/bash.bashrc) ---
+if [[ "$(uname)" == "Darwin" ]]; then
+  [[ -r "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh" ]] && \
+    source "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh"
+fi
+
 # --- Aliases ---
 alias search="rg"

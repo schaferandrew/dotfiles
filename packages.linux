@@ -12,6 +12,7 @@
 git
 
 # Shell / terminal
+bash-completion
 tmux
 vim
 
