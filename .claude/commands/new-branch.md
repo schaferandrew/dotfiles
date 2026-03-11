@@ -1,15 +1,24 @@
 Create a new git branch following the project naming convention.
 
-Branch format: `as-{ticket}-{descriptive-title}`
+**If a ticket or issue number was provided with the task**, use it:
+```
+as-{ticket}-{descriptive-title}
+```
+
+**If no ticket was provided**, derive a short descriptive slug from the task — do not ask the user for one:
+```
+as-{descriptive-title}
+```
+
+Keep the descriptive title short (2–4 words, kebab-case), based on the task at hand.
 
 Steps:
-1. Ask the user for the ticket number (GitHub issue # or Linear ticket ID) if not provided. If there's no ticket, ask for a short descriptive slug.
-2. Ask for or confirm the descriptive title (kebab-case, concise).
-3. Show the full branch name for confirmation before creating it.
-4. Run: `git checkout -b as-{ticket}-{descriptive-title}`
-5. Confirm success and remind the user to push with `-u origin` when ready.
+1. Determine the branch name from the above rules (no prompting if ticket is absent).
+2. Show the branch name and run: `git checkout -b {branch-name}`
+3. Confirm success and remind the user to push with `-u origin` when ready.
 
-Example branch names:
-- `as-01-add-default-agent-files`
+Examples:
+- `as-01-add-agent-files`
 - `as-gh-42-fix-bootstrap-linux`
 - `as-ENG-123-update-opencode-config`
+- `as-add-agent-files` (no ticket)

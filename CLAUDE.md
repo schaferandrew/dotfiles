@@ -4,18 +4,25 @@ Project-specific instructions and conventions for Claude Code agents working in 
 
 ## Branch Naming Convention
 
-Always create a new branch when switching to a new feature or task:
+Always create a new branch when switching to a new feature or task.
 
+**If a ticket or issue number is provided:**
 ```
 as-{ticket}-{descriptive-title}
 ```
 
-Where `{ticket}` is the GitHub issue number or Linear ticket ID (if applicable), or a short slug if none exists.
+**If no ticket is provided**, derive a short descriptive slug from the task — do not ask:
+```
+as-{descriptive-title}
+```
+
+Keep the descriptive title short (2–4 words, kebab-case), based on what was asked.
 
 Examples:
-- `as-01-add-default-agent-files`
-- `as-gh-42-fix-bootstrap-linux`
-- `as-ENG-123-update-opencode-config`
+- `as-01-add-agent-files` — with GitHub issue #1
+- `as-gh-42-fix-bootstrap-linux` — with GitHub issue #42
+- `as-ENG-123-update-opencode-config` — with Linear ticket
+- `as-add-agent-files` — no ticket given, slug derived from task
 
 ## Commit & Push Rules
 
