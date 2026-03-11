@@ -69,15 +69,10 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init bash)"
 fi
 
-# --- Bash completion ---
+# --- Bash completion (macOS only; Linux auto-loads via /etc/bash.bashrc) ---
 if [[ "$(uname)" == "Darwin" ]]; then
-  # bash-completion@2: loads all Homebrew completions (including git)
   [[ -r "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh" ]] && \
     source "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh"
-else
-  # Linux: auto-loaded via /etc/bash.bashrc; source directly as fallback
-  [[ -f /usr/share/bash-completion/completions/git ]] && \
-    source /usr/share/bash-completion/completions/git
 fi
 
 # --- Aliases ---
