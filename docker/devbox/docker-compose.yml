@@ -1,22 +1,19 @@
 services:
   devbox:
-    build:
-      context: ../../
-      dockerfile: docker/devbox/Dockerfile
-    image: devbox:local
-    container_name: devbox
     hostname: devbox
-    stdin_open: true
-    tty: true
+    build: .
+    container_name: devbox
+    restart: unless-stopped
     volumes:
-      # Persist home directory across rebuilds
-      - devbox-home:/home/dev
-      # Mount your local secrets (never committed to git)
-      - ~/.secrets/env:/home/dev/.secrets/env:ro
-      # Mount projects directory (adjust to taste)
-      - ~/projects:/home/dev/projects
+      - /mnt/storage/docker/devbox/workspace:/workspace
+      - /mnt/storage/docker/devbox/home:/root
+    ports:
+      - "2222:22"
+      - "3100:3000"
     environment:
       - TERM=xterm-256color
-
-volumes:
-  devbox-home:
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: '4'
