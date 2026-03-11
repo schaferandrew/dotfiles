@@ -8,11 +8,4 @@
 
 ## Testing
 
-- [ ] Tested on macOS
-- [ ] Tested on Linux
-- [ ] Bootstrap script runs cleanly
-- [ ] Dotfiles applied correctly
-
-## Notes
-
-<!-- Anything reviewers should know -->
+- [ ] Local Smoke Test
