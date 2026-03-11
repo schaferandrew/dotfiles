@@ -167,11 +167,14 @@ install_node() {
     log "Installing nvm"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
   fi
-  # nvm.sh uses unbound variables internally; disable nounset while sourcing it
+  # nvm uses unbound variables internally in both its source and commands
   # shellcheck disable=SC1091
-  { set +u; source "$NVM_DIR/nvm.sh"; set -u; }
-  nvm install --lts
-  nvm use --lts
+  { set +u
+    source "$NVM_DIR/nvm.sh"
+    nvm install --lts
+    nvm use --lts
+    set -u
+  }
   log "Installing pnpm"
   npm install -g pnpm
 }
