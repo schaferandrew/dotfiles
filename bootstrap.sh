@@ -167,8 +167,9 @@ install_node() {
     log "Installing nvm"
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
   fi
+  # nvm.sh uses unbound variables internally; disable nounset while sourcing it
   # shellcheck disable=SC1091
-  source "$NVM_DIR/nvm.sh"
+  { set +u; source "$NVM_DIR/nvm.sh"; set -u; }
   nvm install --lts
   nvm use --lts
   log "Installing pnpm"
@@ -238,10 +239,29 @@ copy_if_missing() {
   fi
 }
 
+# For shell RC files: if the file already exists, append a source line so our
+# config layers on top of system defaults. Idempotent — skips if already present.
+ensure_sourced() {
+  local src="$1" dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  if [ ! -f "$dest" ]; then
+    cp "$src" "$dest"
+    log "Created $dest"
+    return
+  fi
+  if grep -qF "$src" "$dest" 2>/dev/null; then
+    return  # already sourced
+  fi
+  printf '\n# dotfiles\n[ -f "%s" ] && source "%s"\n' "$src" "$src" >> "$dest"
+  log "Added source line for $(basename "$src") to $dest"
+}
+
 install_dotfiles() {
-  log "Copying dotfiles"
-  copy_if_missing "$ROOT_DIR/dotfiles/zsh/.zshrc"             "$HOME/.zshrc"
-  copy_if_missing "$ROOT_DIR/dotfiles/bash/.bashrc"           "$HOME/.bashrc"
+  log "Installing dotfiles"
+  # Shell RC files: append a source line if the file already exists
+  ensure_sourced "$ROOT_DIR/dotfiles/bash/.bashrc" "$HOME/.bashrc"
+  ensure_sourced "$ROOT_DIR/dotfiles/zsh/.zshrc"   "$HOME/.zshrc"
+  # Other config files: copy only if not present (safe to clobber would lose customisation)
   copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig"         "$HOME/.gitconfig"
   copy_if_missing "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
   copy_if_missing "$ROOT_DIR/dotfiles/vim/.vimrc"             "$HOME/.vimrc"
