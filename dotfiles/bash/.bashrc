@@ -1,6 +1,9 @@
-# ~/.zshrc
+# ~/.bashrc
 # Production-ready shell config for AI-assisted development.
 # Safe to source multiple times.
+
+# Only run for interactive shells
+[[ $- != *i* ]] && return
 
 # --- PATH setup ---
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -58,12 +61,12 @@ fi
 
 # rbenv
 if command -v rbenv >/dev/null 2>&1; then
-  eval "$(rbenv init - zsh)"
+  eval "$(rbenv init - bash)"
 fi
 
 # starship
 if command -v starship >/dev/null 2>&1; then
-  eval "$(starship init zsh)"
+  eval "$(starship init bash)"
 fi
 
 # --- Aliases ---
