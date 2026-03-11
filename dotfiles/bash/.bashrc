@@ -69,13 +69,16 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init bash)"
 fi
 
-# --- Git bash completion ---
-for _git_comp in \
-  /usr/share/bash-completion/completions/git \
-  "${HOMEBREW_PREFIX:-/opt/homebrew}/share/bash-completion/completions/git"; do
-  if [[ -f "$_git_comp" ]]; then source "$_git_comp"; break; fi
-done
-unset _git_comp
+# --- Bash completion ---
+if [[ "$(uname)" == "Darwin" ]]; then
+  # bash-completion@2: loads all Homebrew completions (including git)
+  [[ -r "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh" ]] && \
+    source "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh"
+else
+  # Linux: auto-loaded via /etc/bash.bashrc; source directly as fallback
+  [[ -f /usr/share/bash-completion/completions/git ]] && \
+    source /usr/share/bash-completion/completions/git
+fi
 
 # --- Aliases ---
 alias search="rg"
