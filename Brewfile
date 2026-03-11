@@ -12,6 +12,7 @@ brew "git"
 brew "gh"
 
 # Shell / terminal
+brew "bash-completion@2"
 brew "tmux"
 brew "vim"
 

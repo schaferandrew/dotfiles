@@ -69,5 +69,13 @@ if command -v starship >/dev/null 2>&1; then
   eval "$(starship init bash)"
 fi
 
+# --- Git bash completion ---
+for _git_comp in \
+  /usr/share/bash-completion/completions/git \
+  "${HOMEBREW_PREFIX:-/opt/homebrew}/share/bash-completion/completions/git"; do
+  if [[ -f "$_git_comp" ]]; then source "$_git_comp"; break; fi
+done
+unset _git_comp
+
 # --- Aliases ---
 alias search="rg"
