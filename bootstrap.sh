@@ -87,6 +87,17 @@ install_if_missing() {
   try_install "$name" "$install_fn"
 }
 
+# Return the rc file for the current login shell.
+current_shell_rc() {
+  local shell_name
+  shell_name="$(basename "$SHELL")"
+  case "$shell_name" in
+    zsh) echo "$HOME/.zshrc" ;;
+    bash) echo "$HOME/.bashrc" ;;
+    *) echo "$HOME/.bashrc" ;;
+  esac
+}
+
 # ============================================================
 # macOS — Homebrew (system tools + GUI apps)
 # ============================================================
@@ -203,7 +214,13 @@ install_node() {
     nvm use --lts
     set -u
   }
-  log "Installing pnpm"
+}
+
+install_pnpm() {
+  if ! command -v npm >/dev/null 2>&1; then
+    warn "npm not found; skipping pnpm install"
+    return 1
+  fi
   npm install -g pnpm
 }
 
@@ -292,6 +309,27 @@ SECRETS
   chmod 600 "$secrets_file"
 }
 
+ensure_secrets_sourced() {
+  local rc_file
+  rc_file="$(current_shell_rc)"
+  log "Ensuring secrets sourcing in $rc_file"
+  mkdir -p "$(dirname "$rc_file")"
+  touch "$rc_file"
+  local marker="# bootstrap-secrets-loader"
+  grep -qxF "$marker" "$rc_file" 2>/dev/null && return
+  cat >> "$rc_file" <<EOF
+
+# --- Secrets loading ---
+# Never commit secrets. This only loads if the file exists.
+$marker
+if [ -f "\$HOME/.secrets/env" ]; then
+  set -a
+  source "\$HOME/.secrets/env"
+  set +a
+fi
+EOF
+}
+
 copy_if_missing() {
   local src="$1" dest="$2"
   mkdir -p "$(dirname "$dest")"
@@ -304,8 +342,8 @@ copy_if_missing() {
 
 install_dotfiles() {
   log "Copying dotfiles"
-  copy_if_missing "$ROOT_DIR/dotfiles/bash/.bashrc"           "$HOME/.bashrc"
-  copy_if_missing "$ROOT_DIR/dotfiles/zsh/.zshrc"             "$HOME/.zshrc"
+  log "  Note: .zshrc and .bashrc in this repo are reference templates only."
+  log "  Use ensure_secrets_sourced() for critical bootstrap lines."
   copy_if_missing "$ROOT_DIR/dotfiles/git/.gitconfig"         "$HOME/.gitconfig"
   copy_if_missing "$ROOT_DIR/dotfiles/starship/starship.toml" "$HOME/.config/starship.toml"
   copy_if_missing "$ROOT_DIR/dotfiles/vim/.vimrc"             "$HOME/.vimrc"
@@ -352,9 +390,64 @@ configure_git_user() {
   printf "  Git identity set to: %s <%s>\n" "$git_name" "$git_email"
 }
 
+generate_ollama_models_json() {
+  # Build a JSON models object from the current ollama list.
+  # Falls back to gpt-oss:20b if ollama is unavailable or lists nothing.
+  local models=()
+  if command -v ollama >/dev/null 2>&1; then
+    while IFS= read -r model; do
+      [ -z "$model" ] && continue
+      models+=("$model")
+    done < <(ollama list 2>/dev/null | tail -n +2 | awk '{print $1}')
+  fi
+
+  if [ ${#models[@]} -eq 0 ]; then
+    printf '        "gpt-oss:20b": {\n          "context": 128000\n        }\n'
+    return
+  fi
+
+  local i
+  for i in "${!models[@]}"; do
+    local comma=""
+    if [ "$i" -lt $((${#models[@]} - 1)) ]; then
+      comma=','
+    fi
+    printf '        "%s": {\n          "context": 128000\n        }%s\n' "${models[$i]}" "$comma"
+  done
+}
+
 install_opencode_config() {
   log "Generating Opencode config"
-  copy_if_missing "$ROOT_DIR/dotfiles/opencode/opencode.template.jsonc" "$HOME/.config/opencode/opencode.jsonc"
+  mkdir -p "$HOME/.config/opencode"
+  local config_file="$HOME/.config/opencode/opencode.jsonc"
+
+  cat > "$config_file" <<'HEADER'
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Strong hosted default; set local model as low-latency small model.
+  "model": "openrouter/anthropic/claude-sonnet-4-5",
+  "small_model": "openrouter/anthropic/claude-3-5-haiku",
+
+  // Local Ollama provider
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+HEADER
+
+  generate_ollama_models_json >> "$config_file"
+
+  cat >> "$config_file" <<'FOOTER'
+      }
+    }
+  }
+}
+FOOTER
 }
 
 validate_env() {
@@ -423,6 +516,7 @@ main() {
   install_if_missing "Starship" starship install_starship
   install_if_missing "Ollama"   ollama   install_ollama   optional
   try_install "node"    install_node
+  install_if_missing "pnpm"   pnpm     install_pnpm     optional
   try_install "python"  install_python
   install_if_missing "rbenv"  rbenv    install_ruby     optional
   install_if_missing "Opencode CLI" opencode install_opencode_cli
@@ -431,6 +525,7 @@ main() {
   ensure_secrets
   configure_gh_auth
   install_dotfiles
+  ensure_secrets_sourced
   ensure_starship_init
   configure_git_user
   install_opencode_config

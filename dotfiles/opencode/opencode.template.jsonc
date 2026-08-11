@@ -14,9 +14,9 @@
         "baseURL": "http://localhost:11434/v1"
       },
       "models": {
-        "qwen3.5:9b-mlx": {},
-        "qwen3.6:27b-mlx": {},
-        "gemma4:26b": {}
+        "qwen3.5:9b-mlx": { "context": 128000 },
+        "qwen3.6:27b-mlx": { "context": 128000 },
+        "gemma4:26b": { "context": 128000 }
       }
     }
   }
