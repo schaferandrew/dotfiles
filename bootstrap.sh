@@ -73,6 +73,20 @@ prompt_optional() {
   esac
 }
 
+# Install a command-line tool if it's not already present.
+# Defaults silently install if missing; optional tools prompt first.
+# Usage: install_if_missing "Display Name" command_name install_fn [optional]
+install_if_missing() {
+  local name="$1" cmd="$2" install_fn="$3" optional="${4:-}"
+  if command -v "$cmd" >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ "$optional" = "optional" ]; then
+    prompt_optional "$name" || return 0
+  fi
+  try_install "$name" "$install_fn"
+}
+
 # ============================================================
 # macOS — Homebrew (system tools + GUI apps)
 # ============================================================
@@ -107,6 +121,11 @@ install_cask_if_possible() {
   fi
 }
 
+install_ruby() {
+  [[ "$OS" != "macos" ]] && return
+  brew install rbenv
+}
+
 # ============================================================
 # Linux — apt (system tools)
 # ============================================================
@@ -132,27 +151,36 @@ install_gh_linux() {
   _sudo_wrap apt-get install -y gh
 }
 
+configure_gh_auth() {
+  command -v gh >/dev/null 2>&1 || return
+  gh auth status >/dev/null 2>&1 && return
+  local secrets_file="$HOME/.secrets/env"
+  local token=""
+  if [ -f "$secrets_file" ]; then
+    token=$(grep '^GITHUB_TOKEN=' "$secrets_file" 2>/dev/null | sed 's/^GITHUB_TOKEN=//')
+  fi
+  if [ -z "$token" ]; then
+    warn "GitHub CLI not authenticated and GITHUB_TOKEN not found in ~/.secrets/env"
+    return
+  fi
+  log "Authenticating GitHub CLI"
+  printf '%s\n' "$token" | gh auth login --with-token || warn "gh auth login failed"
+}
+
 # ============================================================
 # Shared — curl-installed tools (same script on macOS + Linux)
 # ============================================================
 
 install_uv() {
-  command -v uv >/dev/null 2>&1 && return
-  log "Installing uv"
   curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$PATH"
 }
 
 install_starship() {
-  command -v starship >/dev/null 2>&1 && return
-  log "Installing Starship prompt"
   curl -sS https://starship.rs/install.sh | sh -s -- --yes
 }
 
 install_ollama() {
-  command -v ollama >/dev/null 2>&1 && return
-  prompt_optional "Ollama (local LLM runner)" || return 0
-  log "Installing Ollama"
   curl -fsSL https://ollama.ai/install.sh | sh
 }
 
@@ -200,14 +228,13 @@ install_python() {
 # ============================================================
 
 install_opencode_cli() {
-  command -v opencode >/dev/null 2>&1 && return
-  prompt_optional "Opencode CLI (AI coding agent)" || return 0
-  log "Installing Opencode CLI"
-  if command -v npm >/dev/null 2>&1; then
-    npm install -g opencode-ai || warn "Failed to install opencode-ai via npm"
-  else
+  if ! command -v npm >/dev/null 2>&1; then
     warn "npm not found; install manually: npm install -g opencode-ai"
+    return 1
   fi
+  # npm v11+ may warn about allow-scripts for postinstall lifecycle scripts.
+  # The opencode-ai postinstall is benign (self-extracting native binary).
+  npm install -g opencode-ai --allow-scripts || npm install -g opencode-ai
 }
 
 # ============================================================
@@ -219,16 +246,49 @@ ensure_secrets() {
   mkdir -p "$HOME/.secrets"
   chmod 700 "$HOME/.secrets"
   local secrets_file="$HOME/.secrets/env"
-  if [ ! -f "$secrets_file" ]; then
-    cat <<'SECRETS' > "$secrets_file"
-OPENROUTER_API_KEY=
-ANTHROPIC_API_KEY=
+
+  local openrouter_key="" anthropic_key="" github_token=""
+  if [ -f "$secrets_file" ]; then
+    # shellcheck disable=SC1090
+    source "$secrets_file"
+    openrouter_key="${OPENROUTER_API_KEY:-}"
+    anthropic_key="${ANTHROPIC_API_KEY:-}"
+    github_token="${GITHUB_TOKEN:-}"
+  fi
+
+  local need_prompt=""
+  [ -z "$openrouter_key" ] && need_prompt=1
+  [ -z "$anthropic_key" ] && need_prompt=1
+  [ -z "$github_token" ] && need_prompt=1
+
+  if [ -t 0 ] && [ -n "$need_prompt" ]; then
+    printf "  Enter API keys used by opencode (blank keeps existing value):\n"
+    if [ -z "$openrouter_key" ]; then
+      read -rp "  OpenRouter API key: " input
+      [ -n "$input" ] && openrouter_key="$input"
+    fi
+    if [ -z "$anthropic_key" ]; then
+      read -rp "  Anthropic API key: " input
+      [ -n "$input" ] && anthropic_key="$input"
+    fi
+    if [ -z "$github_token" ]; then
+      read -rp "  GitHub PAT (for gh CLI): " input
+      [ -n "$input" ] && github_token="$input"
+    fi
+  elif [ -t 0 ]; then
+    log "API keys already set; skipping prompts"
+  else
+    warn "Non-interactive session; leaving API keys unchanged"
+  fi
+
+  cat > "$secrets_file" <<SECRETS
+OPENROUTER_API_KEY=$openrouter_key
+ANTHROPIC_API_KEY=$anthropic_key
+GITHUB_TOKEN=$github_token
 OPENAI_API_KEY=
 GOOGLE_GEMINI_API_KEY=
 OPENCODEZEN_API_KEY=
-GITHUB_TOKEN=
 SECRETS
-  fi
   chmod 600 "$secrets_file"
 }
 
@@ -359,15 +419,17 @@ main() {
 
   # Shared — curl-installed; warn and continue on failure so one bad network
   # request doesn't abort everything that comes after.
-  try_install "uv"      install_uv
-  try_install "starship" install_starship
-  try_install "ollama"  install_ollama   # optional: user is prompted
+  install_if_missing "uv"       uv       install_uv
+  install_if_missing "Starship" starship install_starship
+  install_if_missing "Ollama"   ollama   install_ollama   optional
   try_install "node"    install_node
   try_install "python"  install_python
-  try_install "opencode" install_opencode_cli  # optional: user is prompted
+  install_if_missing "rbenv"  rbenv    install_ruby     optional
+  install_if_missing "Opencode CLI" opencode install_opencode_cli
 
   # Config & identity — run these regardless of what was skipped above
   ensure_secrets
+  configure_gh_auth
   install_dotfiles
   ensure_starship_init
   configure_git_user

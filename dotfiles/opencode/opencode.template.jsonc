@@ -1,37 +1,22 @@
 {
   "$schema": "https://opencode.ai/config.json",
 
-  // Strong hosted default; set local model as small model for low-latency tasks.
-  "model": "openrouter/anthropic/claude-3.5-sonnet",
-  "small_model": "ollama/qwen2.5-coder:7b",
+  // Strong hosted default; set local model as low-latency small model.
+  "model": "openrouter/anthropic/claude-sonnet-4-5",
+  "small_model": "openrouter/anthropic/claude-3-5-haiku",
 
-  // Providers:
-  // - Ollama for local/private inference
-  // - OpenRouter for broad hosted model routing
-  // - Anthropic direct for first-party Claude access
+  // Local Ollama provider
   "provider": {
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Ollama",
+      "name": "Ollama (local)",
       "options": {
         "baseURL": "http://localhost:11434/v1"
       },
       "models": {
-        "qwen2.5-coder:7b": {},
-        "deepseek-coder:6.7b": {},
-        "codellama:13b": {}
-      }
-    },
-    "openrouter": {
-      "npm": "@openrouter/ai-sdk-provider",
-      "options": {
-        "apiKey": "{env:OPENROUTER_API_KEY}"
-      }
-    },
-    "anthropic": {
-      "npm": "@ai-sdk/anthropic",
-      "options": {
-        "apiKey": "{env:ANTHROPIC_API_KEY}"
+        "qwen3.5:9b-mlx": {},
+        "qwen3.6:27b-mlx": {},
+        "gemma4:26b": {}
       }
     }
   }

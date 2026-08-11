@@ -27,8 +27,5 @@ brew "ripgrep"
 brew "ffmpeg"
 brew "yt-dlp"
 
-# Language runtimes / managers
-brew "rbenv"
-
 # Fonts
 cask "font-jetbrains-mono-nerd-font"
