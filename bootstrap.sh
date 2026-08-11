@@ -349,6 +349,21 @@ install_dotfiles() {
   copy_if_missing "$ROOT_DIR/dotfiles/vim/.vimrc"             "$HOME/.vimrc"
 }
 
+ensure_line_in_file() {
+  local line="$1" file="$2"
+  mkdir -p "$(dirname "$file")"
+  touch "$file"
+  grep -qxF "$line" "$file" || echo "$line" >> "$file"
+}
+
+ensure_starship_init() {
+  log "Ensuring starship init is present in shell rc files"
+  # shellcheck disable=SC2016 # line must be written literally, not expanded
+  ensure_line_in_file 'eval "$(starship init zsh)"'  "$HOME/.zshrc"
+  # shellcheck disable=SC2016 # line must be written literally, not expanded
+  ensure_line_in_file 'eval "$(starship init bash)"' "$HOME/.bashrc"
+}
+
 configure_git_user() {
   log "Configuring Git identity"
   local current_name current_email
@@ -511,6 +526,7 @@ main() {
   configure_gh_auth
   install_dotfiles
   ensure_secrets_sourced
+  ensure_starship_init
   configure_git_user
   install_opencode_config
   validate_env
