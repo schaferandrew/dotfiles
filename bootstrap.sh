@@ -195,6 +195,10 @@ install_ollama() {
   curl -fsSL https://ollama.ai/install.sh | sh
 }
 
+install_pi() {
+  curl -fsSL https://pi.dev/install.sh | sh
+}
+
 # ============================================================
 # Shared — Node / pnpm (nvm via curl)
 # ============================================================
@@ -453,7 +457,7 @@ FOOTER
 validate_env() {
   log "Validating environment"
   local missing=0
-  for cmd in git gh curl wget jq rg tmux vim starship uv node; do
+  for cmd in git gh curl wget jq rg tmux vim starship uv node pi; do
     command -v "$cmd" >/dev/null 2>&1 || { warn "Missing command: $cmd"; missing=1; }
   done
   [ "$missing" -ne 0 ] && warn "Some commands are missing. Re-run bootstrap to retry."
@@ -519,6 +523,7 @@ main() {
   install_if_missing "pnpm"   pnpm     install_pnpm     optional
   try_install "python"  install_python
   install_if_missing "rbenv"  rbenv    install_ruby     optional
+  install_if_missing "Pi"       pi       install_pi       optional
   install_if_missing "Opencode CLI" opencode install_opencode_cli
 
   # Config & identity — run these regardless of what was skipped above
