@@ -19,11 +19,11 @@ Production-quality dotfiles repo and bootstrap system for a senior software engi
 - `pipx` and baseline tools (`pre-commit`, `ruff`)
 - Docker Desktop (cask)
 - Ollama (local models)
-- Pi (AI coding agent via `pi.dev/install.sh`)
+- Pi (AI coding agent via `pi.dev/install.sh`; optional, prompted)
 - VS Code and Cursor (casks)
-- Opencode CLI (best-effort install)
+- Opencode CLI (optional, prompted)
 - Zsh configuration, git config, starship prompt
-- Opencode config generated at `~/.config/opencode/opencode.jsonc`
+- Opencode config generated at `~/.config/opencode/opencode.jsonc` (only when Opencode is installed)
 
 ## Secrets Management
 - Bootstrap creates `~/.secrets/env` with empty placeholders.
@@ -65,7 +65,7 @@ Add the key to GitHub.
 - Cursor:
   - If Homebrew cask is unavailable, download from the official Cursor site.
 - Docker Desktop:
-  - If the cask fails, download from the official Docker Desktop site.
+  - Installed via the `docker-desktop` cask and upgraded to the latest release on every bootstrap run (`--greedy`, since it auto-updates). The script warns if Gatekeeper rejects the app; if so, delete `/Applications/Docker.app` and reinstall from the official Docker Desktop site.
 - LM Studio:
   - Not auto-installed. Add it manually if you want it.
 

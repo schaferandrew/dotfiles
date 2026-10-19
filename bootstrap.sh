@@ -116,6 +116,10 @@ install_homebrew() {
 
 install_brew_bundle() {
   [[ "$OS" != "macos" ]] && return
+  # Refresh cask metadata first so casks resolve to the newest release rather
+  # than whatever version was in a stale local API cache.
+  log "Updating Homebrew"
+  brew update || warn "brew update failed; cask versions may be stale"
   log "Installing Brewfile packages"
   brew bundle --file "$BREWFILE"
 }
@@ -129,6 +133,30 @@ install_cask_if_possible() {
     brew install --cask "$cask" || warn "Failed to install cask: $cask"
   else
     warn "Cask not available: $cask"
+  fi
+}
+
+# Docker Desktop gets its own installer: the legacy `docker` cask name is an
+# alias, `brew upgrade` skips auto-updating casks without --greedy, and an
+# outdated build can ship helpers macOS flags as malware. Always converge on
+# the latest signed release and verify Gatekeeper accepts it.
+install_docker_desktop() {
+  [[ "$OS" != "macos" ]] && return
+  local cask="docker-desktop"
+  local app="/Applications/Docker.app"
+
+  if brew list --cask "$cask" >/dev/null 2>&1; then
+    log "Upgrading Docker Desktop to the latest release"
+    brew upgrade --cask --greedy "$cask" || warn "Failed to upgrade Docker Desktop"
+  elif [ -d "$app" ]; then
+    log "Docker Desktop already installed outside Homebrew; update it from the app (Check for updates)"
+  else
+    log "Installing cask: $cask"
+    brew install --cask "$cask" || { warn "Failed to install Docker Desktop"; return; }
+  fi
+
+  if [ -d "$app" ] && ! spctl --assess --type execute "$app" >/dev/null 2>&1; then
+    warn "Gatekeeper rejected $app — remove it and reinstall the latest build from https://www.docker.com/products/docker-desktop"
   fi
 }
 
@@ -421,6 +449,10 @@ generate_ollama_models_json() {
 }
 
 install_opencode_config() {
+  if ! command -v opencode >/dev/null 2>&1; then
+    log "Opencode CLI not installed; skipping Opencode config"
+    return 0
+  fi
   log "Generating Opencode config"
   mkdir -p "$HOME/.config/opencode"
   local config_file="$HOME/.config/opencode/opencode.jsonc"
@@ -457,7 +489,7 @@ FOOTER
 validate_env() {
   log "Validating environment"
   local missing=0
-  for cmd in git gh curl wget jq rg tmux vim starship uv node pi; do
+  for cmd in git gh curl wget jq rg tmux vim starship uv node; do
     command -v "$cmd" >/dev/null 2>&1 || { warn "Missing command: $cmd"; missing=1; }
   done
   [ "$missing" -ne 0 ] && warn "Some commands are missing. Re-run bootstrap to retry."
@@ -508,7 +540,7 @@ main() {
   install_brew_bundle
   install_cask_if_possible "visual-studio-code"
   install_cask_if_possible "cursor"
-  install_cask_if_possible "docker"
+  install_docker_desktop
 
   # Linux — apt for system tools (hard failure: same reason)
   install_apt_packages
@@ -524,7 +556,7 @@ main() {
   try_install "python"  install_python
   install_if_missing "rbenv"  rbenv    install_ruby     optional
   install_if_missing "Pi"       pi       install_pi       optional
-  install_if_missing "Opencode CLI" opencode install_opencode_cli
+  install_if_missing "Opencode CLI" opencode install_opencode_cli optional
 
   # Config & identity — run these regardless of what was skipped above
   ensure_secrets
