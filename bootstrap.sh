@@ -445,6 +445,10 @@ generate_ollama_models_json() {
 }
 
 install_opencode_config() {
+  if ! command -v opencode >/dev/null 2>&1; then
+    log "Opencode CLI not installed; skipping Opencode config"
+    return 0
+  fi
   log "Generating Opencode config"
   mkdir -p "$HOME/.config/opencode"
   local config_file="$HOME/.config/opencode/opencode.jsonc"
@@ -547,7 +551,7 @@ main() {
   install_if_missing "pnpm"   pnpm     install_pnpm     optional
   try_install "python"  install_python
   install_if_missing "rbenv"  rbenv    install_ruby     optional
-  install_if_missing "Opencode CLI" opencode install_opencode_cli
+  install_if_missing "Opencode CLI" opencode install_opencode_cli optional
 
   # Config & identity — run these regardless of what was skipped above
   ensure_secrets

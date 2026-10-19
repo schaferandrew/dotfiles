@@ -20,9 +20,9 @@ Production-quality dotfiles repo and bootstrap system for a senior software engi
 - Docker Desktop (cask)
 - Ollama (local models)
 - VS Code and Cursor (casks)
-- Opencode CLI (best-effort install)
+- Opencode CLI (optional, prompted)
 - Zsh configuration, git config, starship prompt
-- Opencode config generated at `~/.config/opencode/opencode.jsonc`
+- Opencode config generated at `~/.config/opencode/opencode.jsonc` (only when Opencode is installed)
 
 ## Secrets Management
 - Bootstrap creates `~/.secrets/env` with empty placeholders.
