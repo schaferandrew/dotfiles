@@ -64,7 +64,7 @@ Add the key to GitHub.
 - Cursor:
   - If Homebrew cask is unavailable, download from the official Cursor site.
 - Docker Desktop:
-  - If the cask fails, download from the official Docker Desktop site.
+  - Installed via the `docker-desktop` cask and upgraded to the latest release on every bootstrap run (`--greedy`, since it auto-updates). The script warns if Gatekeeper rejects the app; if so, delete `/Applications/Docker.app` and reinstall from the official Docker Desktop site.
 - LM Studio:
   - Not auto-installed. Add it manually if you want it.
 
