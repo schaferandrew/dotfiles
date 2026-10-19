@@ -223,6 +223,10 @@ install_ollama() {
   curl -fsSL https://ollama.ai/install.sh | sh
 }
 
+install_pi() {
+  curl -fsSL https://pi.dev/install.sh | sh
+}
+
 # ============================================================
 # Shared — Node / pnpm (nvm via curl)
 # ============================================================
@@ -551,6 +555,7 @@ main() {
   install_if_missing "pnpm"   pnpm     install_pnpm     optional
   try_install "python"  install_python
   install_if_missing "rbenv"  rbenv    install_ruby     optional
+  install_if_missing "Pi"       pi       install_pi       optional
   install_if_missing "Opencode CLI" opencode install_opencode_cli optional
 
   # Config & identity — run these regardless of what was skipped above

@@ -19,6 +19,7 @@ Production-quality dotfiles repo and bootstrap system for a senior software engi
 - `pipx` and baseline tools (`pre-commit`, `ruff`)
 - Docker Desktop (cask)
 - Ollama (local models)
+- Pi (AI coding agent via `pi.dev/install.sh`; optional, prompted)
 - VS Code and Cursor (casks)
 - Opencode CLI (optional, prompted)
 - Zsh configuration, git config, starship prompt
